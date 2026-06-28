@@ -15,4 +15,4 @@ Two players can gather wood and stone, build windmills, earn gold, and destroy e
 
 ## Prototype check
 
-Gather `3 Wood` and `2 Stone`, use the build pad to place a windmill, then confirm `Gold` increases.
+Gather `3 Wood` and `2 Stone`, build a windmill, confirm `Gold` increases, then attack the windmill until it is destroyed.

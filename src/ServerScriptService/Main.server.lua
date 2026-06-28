@@ -5,7 +5,9 @@ local WINDMILL_COST = {
 	Wood = 3,
 	Stone = 2,
 }
+local WINDMILL_DAMAGE = 1
 local WINDMILL_GOLD_INTERVAL = 5
+local WINDMILL_HEALTH = 3
 
 local resources = {
 	{
@@ -25,6 +27,7 @@ local resources = {
 }
 
 local windmillCounts = {}
+local windmillSlots = {}
 
 local function spawnGround()
 	local existingGround = Workspace:FindFirstChild("Ground")
@@ -95,6 +98,34 @@ local function createPart(parent, name, size, position, color, material)
 	return part
 end
 
+local function addAttackPrompt(model, part, owner)
+	local health = Instance.new("IntValue")
+	health.Name = "Health"
+	health.Value = WINDMILL_HEALTH
+	health.Parent = model
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Attack"
+	prompt.ObjectText = "Windmill Health: " .. health.Value
+	prompt.HoldDuration = 0.2
+	prompt.MaxActivationDistance = 10
+	prompt.Parent = part
+
+	prompt.Triggered:Connect(function()
+		if not model.Parent then
+			return
+		end
+
+		health.Value = math.max(health.Value - WINDMILL_DAMAGE, 0)
+		prompt.ObjectText = "Windmill Health: " .. health.Value
+
+		if health.Value == 0 then
+			windmillCounts[owner] = math.max((windmillCounts[owner] or 0) - 1, 0)
+			model:Destroy()
+		end
+	end)
+end
+
 local function spawnWindmill(player)
 	if not canAffordWindmill(player) then
 		return
@@ -112,17 +143,21 @@ local function spawnWindmill(player)
 	end
 
 	windmillCounts[player] = (windmillCounts[player] or 0) + 1
-	local slot = windmillCounts[player]
+	windmillSlots[player] = (windmillSlots[player] or 0) + 1
+	local slot = windmillSlots[player]
 	local basePosition = Vector3.new(-24 + (slot * 8), 0, 18)
 	local model = Instance.new("Model")
 	model.Name = player.Name .. "Windmill"
 	model.Parent = folder
 
-	createPart(model, "Base", Vector3.new(5, 1, 5), basePosition + Vector3.new(0, 0.5, 0), Color3.fromRGB(130, 95, 60), Enum.Material.WoodPlanks)
+	local base = createPart(model, "Base", Vector3.new(5, 1, 5), basePosition + Vector3.new(0, 0.5, 0), Color3.fromRGB(130, 95, 60), Enum.Material.WoodPlanks)
 	createPart(model, "Tower", Vector3.new(2, 8, 2), basePosition + Vector3.new(0, 5, 0), Color3.fromRGB(155, 115, 70), Enum.Material.Wood)
 	createPart(model, "Hub", Vector3.new(2, 2, 2), basePosition + Vector3.new(0, 9, -1.25), Color3.fromRGB(230, 220, 190), Enum.Material.Wood)
 	createPart(model, "BladeVertical", Vector3.new(1, 8, 0.5), basePosition + Vector3.new(0, 9, -2), Color3.fromRGB(235, 235, 210), Enum.Material.Wood)
 	createPart(model, "BladeHorizontal", Vector3.new(8, 1, 0.5), basePosition + Vector3.new(0, 9, -2), Color3.fromRGB(235, 235, 210), Enum.Material.Wood)
+
+	-- ponytail: all windmills are attackable until teams decide ownership rules.
+	addAttackPrompt(model, base, player)
 end
 
 local function spawnBuildPad()
@@ -199,6 +234,7 @@ end)
 
 Players.PlayerRemoving:Connect(function(player)
 	windmillCounts[player] = nil
+	windmillSlots[player] = nil
 end)
 
 for _, player in ipairs(Players:GetPlayers()) do
