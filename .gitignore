@@ -1,0 +1,23 @@
+# Local agent notes
+codex.md
+CODEX.md
+
+# Roblox Studio exports
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# Build/temp output
+*.log
+*.tmp
+tmp/
+temp/
+build/
+dist/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
