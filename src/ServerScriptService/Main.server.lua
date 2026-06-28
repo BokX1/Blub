@@ -1,6 +1,12 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
+local WINDMILL_COST = {
+	Wood = 3,
+	Stone = 2,
+}
+local WINDMILL_GOLD_INTERVAL = 5
+
 local resources = {
 	{
 		name = "Wood",
@@ -17,6 +23,8 @@ local resources = {
 		material = Enum.Material.Slate,
 	},
 }
+
+local windmillCounts = {}
 
 local function spawnGround()
 	local existingGround = Workspace:FindFirstChild("Ground")
@@ -49,6 +57,12 @@ local function addLeaderstats(player)
 			value.Parent = leaderstats
 		end
 	end
+
+	if not leaderstats:FindFirstChild("Gold") then
+		local gold = Instance.new("IntValue")
+		gold.Name = "Gold"
+		gold.Parent = leaderstats
+	end
 end
 
 local function awardResource(player, resourceName)
@@ -58,6 +72,91 @@ local function awardResource(player, resourceName)
 	if value then
 		value.Value += 1
 	end
+end
+
+local function canAffordWindmill(player)
+	local leaderstats = player:FindFirstChild("leaderstats")
+
+	return leaderstats
+		and leaderstats.Wood.Value >= WINDMILL_COST.Wood
+		and leaderstats.Stone.Value >= WINDMILL_COST.Stone
+end
+
+local function createPart(parent, name, size, position, color, material)
+	local part = Instance.new("Part")
+	part.Name = name
+	part.Anchored = true
+	part.Color = color
+	part.Material = material
+	part.Position = position
+	part.Size = size
+	part.Parent = parent
+
+	return part
+end
+
+local function spawnWindmill(player)
+	if not canAffordWindmill(player) then
+		return
+	end
+
+	local leaderstats = player.leaderstats
+	leaderstats.Wood.Value -= WINDMILL_COST.Wood
+	leaderstats.Stone.Value -= WINDMILL_COST.Stone
+
+	local folder = Workspace:FindFirstChild("Windmills")
+	if not folder then
+		folder = Instance.new("Folder")
+		folder.Name = "Windmills"
+		folder.Parent = Workspace
+	end
+
+	windmillCounts[player] = (windmillCounts[player] or 0) + 1
+	local slot = windmillCounts[player]
+	local basePosition = Vector3.new(-24 + (slot * 8), 0, 18)
+	local model = Instance.new("Model")
+	model.Name = player.Name .. "Windmill"
+	model.Parent = folder
+
+	createPart(model, "Base", Vector3.new(5, 1, 5), basePosition + Vector3.new(0, 0.5, 0), Color3.fromRGB(130, 95, 60), Enum.Material.WoodPlanks)
+	createPart(model, "Tower", Vector3.new(2, 8, 2), basePosition + Vector3.new(0, 5, 0), Color3.fromRGB(155, 115, 70), Enum.Material.Wood)
+	createPart(model, "Hub", Vector3.new(2, 2, 2), basePosition + Vector3.new(0, 9, -1.25), Color3.fromRGB(230, 220, 190), Enum.Material.Wood)
+	createPart(model, "BladeVertical", Vector3.new(1, 8, 0.5), basePosition + Vector3.new(0, 9, -2), Color3.fromRGB(235, 235, 210), Enum.Material.Wood)
+	createPart(model, "BladeHorizontal", Vector3.new(8, 1, 0.5), basePosition + Vector3.new(0, 9, -2), Color3.fromRGB(235, 235, 210), Enum.Material.Wood)
+end
+
+local function spawnBuildPad()
+	local existingPad = Workspace:FindFirstChild("BuildPad")
+	if existingPad then
+		existingPad:Destroy()
+	end
+
+	local pad = createPart(Workspace, "BuildPad", Vector3.new(10, 1, 10), Vector3.new(0, 0.1, 18), Color3.fromRGB(85, 135, 190), Enum.Material.SmoothPlastic)
+
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.ActionText = "Build"
+	prompt.ObjectText = "Windmill (3 Wood, 2 Stone)"
+	prompt.HoldDuration = 0.25
+	prompt.MaxActivationDistance = 10
+	prompt.Parent = pad
+
+	prompt.Triggered:Connect(spawnWindmill)
+end
+
+local function startGoldLoop(player)
+	task.spawn(function()
+		while player.Parent do
+			task.wait(WINDMILL_GOLD_INTERVAL)
+
+			local leaderstats = player:FindFirstChild("leaderstats")
+			local gold = leaderstats and leaderstats:FindFirstChild("Gold")
+			local windmills = windmillCounts[player] or 0
+
+			if gold and windmills > 0 then
+				gold.Value += windmills
+			end
+		end
+	end)
 end
 
 local function spawnResourceNodes()
@@ -93,12 +192,21 @@ local function spawnResourceNodes()
 	end
 end
 
-Players.PlayerAdded:Connect(addLeaderstats)
+Players.PlayerAdded:Connect(function(player)
+	addLeaderstats(player)
+	startGoldLoop(player)
+end)
+
+Players.PlayerRemoving:Connect(function(player)
+	windmillCounts[player] = nil
+end)
 
 for _, player in ipairs(Players:GetPlayers()) do
 	addLeaderstats(player)
+	startGoldLoop(player)
 end
 
 -- ponytail: static nodes are enough until a real map needs spawning rules.
 spawnGround()
+spawnBuildPad()
 spawnResourceNodes()
