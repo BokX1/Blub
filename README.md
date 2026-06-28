@@ -5,3 +5,10 @@ Blub is an original Roblox survival-arena prototype built around a simple loop: 
 ## First playable goal
 
 Two players can gather wood and stone, build windmills, earn gold, and destroy enemy windmills.
+
+## Development
+
+1. Install Rokit.
+2. Run `rokit install`.
+3. Run `rojo serve`.
+4. Connect from Roblox Studio with the Rojo plugin.
